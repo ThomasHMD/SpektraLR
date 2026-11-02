@@ -107,5 +107,6 @@ Refaire les profils : installez spektrafilm (0.3.4), récupérez `dng_render.cpp
 - **Le module et les outils** : GPL-3.0 ([`LICENSE`](LICENSE)).
 - **Les profils** : film modeling powered by spektrafilm. Ils sont dérivés de [spektrafilm](https://github.com/andreavolpato/spektrafilm) d'Andrea Volpato, sous licence CC BY-SA 4.0, et modifiés par moi. Ce que j'ai changé est dans [`CHANGELOG.txt`](presets/SpektraLR/CHANGELOG.txt). Ils restent sous CC BY-SA 4.0 : vous pouvez les partager et les modifier, en gardant ces crédits et cette licence.
 - **SpektraLab**, de Hanze Qiu (GPL-3.0), n'est pas inclus : le module appelle sa commande.
+- **Les photos** (les planches de `docs/figures/` et l'image d'aperçu) : © Thomas Hammoudi, tous droits réservés. Elles ne sont sous aucune des licences ci-dessus, qui couvrent le code, les profils, la documentation et les analyses.
 
 Détail : [`LICENCES-TIERS.md`](LICENCES-TIERS.md). SpektraLR est un projet personnel, sans lien officiel avec spektrafilm, SpektraLab ou Adobe. Lightroom et Camera Raw sont des marques d'Adobe.
