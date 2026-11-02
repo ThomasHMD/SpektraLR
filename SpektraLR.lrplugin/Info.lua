@@ -10,5 +10,5 @@ return {
   LrExportMenuItems = {
     { title = 'SpektraLR…', file = 'Tirer.lua', enabledWhen = 'photosSelected' },
   },
-  VERSION = { major = 0, minor = 1, revision = 0 },
+  VERSION = { major = 0, minor = 1, revision = 1 },
 }

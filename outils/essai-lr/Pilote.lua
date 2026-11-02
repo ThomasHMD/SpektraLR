@@ -1,21 +1,24 @@
 --[[ Pilote.lua : Lightroom piloté par fichiers, pour essayer SpektraLR dans le vrai Lightroom sans cliquer.
 
 Toutes les secondes, le module regarde <son dossier>/pilote/commande.json. Il l'efface, l'exécute et écrit reponse.json
-(`pilote.py` envoie la commande et attend la réponse). Interne : jamais publié, installé par `installer.sh`.
+(`pilote.py` envoie la commande et attend la réponse). Installé par `installer.sh`.
 
-Sources : le SDK Lightroom Classic d'Adobe (LrCatalog, LrPhoto, LrExportSession, LrDevelopPreset) ; l'idée d'un
-module qui interroge en boucle un point d'entrée local vient de lightroom-py (github.com/drshy-org/lightroom-py, MIT,
-qui passe par un serveur HTTP Python). Ici, un simple dossier : rien à installer à côté de Lightroom.
+Sources : le SDK Lightroom Classic d'Adobe (LrCatalog, LrPhoto, LrExportSession, LrDevelopPreset, LrSelection) ;
+l'idée d'un module qui interroge en boucle un point d'entrée local vient de lightroom-py
+(github.com/drshy-org/lightroom-py, MIT, qui passe par un serveur HTTP Python). Ici, un simple dossier : rien à
+installer à côté de Lightroom.
 
 Actions : ping, chercher (photos par nom de fichier), presets (dossiers et noms), copie (copie virtuelle d'une photo,
-rangée dans une collection), rendre (presets ou réglages sur une copie, lecture des réglages, export), tirer (le
-tirage du module, Tirage.lua, sur une copie).
+rangée dans une collection), inventaire et adopter (reprendre les copies d'une collection), rendre (presets ou
+réglages sur une copie, lecture des réglages, export), tirer (le tirage du module, Tirage.lua, sur une copie), retirer
+(des copies ou des tirages, du catalogue).
 ]]
 local LrApplication = import 'LrApplication'
 local LrDate = import 'LrDate'
 local LrExportSession = import 'LrExportSession'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
+local LrSelection = import 'LrSelection'
 local LrTasks = import 'LrTasks'
 
 local Json = require 'Json'
@@ -234,25 +237,52 @@ function actions.adopter(cmd)
   return { ok = true, copie = fiche(copies[cmd.cle]) }
 end
 
--- Copies faites par erreur : rejetées, renommées et rangées à part, pour les supprimer d'un coup à la main
--- (le SDK ne sait pas retirer une photo du catalogue).
-function actions.ecarter(cmd)
+-- Retire du catalogue des copies virtuelles (`ids`) ou des tirages du module (`tirages`, leurs chemins), jamais une
+-- autre photo ; le fichier d'un tirage reste sur le disque. LrPhoto n'a pas de suppression : LrSelection.removeFromCatalog
+-- agit sur la sélection. On montre les photos seules dans une collection temporaire, on vérifie que la sélection est
+-- exactement elles (elle est asynchrone), puis on retire ; la vue de départ est remise.
+function actions.retirer(cmd)
   local cat = catalogue()
-  local faites = {}
+  local photos, voulu = {}, {}
+  for _, n in ipairs(cmd.ids or {}) do
+    local p = cat:getPhotoByLocalId(n) or error('photo introuvable : ' .. tostring(n))
+    if not p:getRawMetadata('isVirtualCopy') then error('pas une copie virtuelle, on n\'y touche pas : ' .. tostring(n)) end
+    photos[#photos + 1] = p
+  end
+  for _, chemin in ipairs(cmd.tirages or {}) do
+    photos[#photos + 1] = cat:findPhotoByPath(chemin) or error('tirage introuvable au catalogue : ' .. chemin)
+  end
+  if #photos == 0 then return { ok = true, retirees = {} } end
+  for _, p in ipairs(photos) do voulu[#voulu + 1] = id(p) end
+  table.sort(voulu)
+  voulu = table.concat(voulu, ',')
+  local sources, temporaire = cat:getActiveSources()
   ecrireAuCatalogue(function()
-    local aSupprimer = cat:createCollection(cmd.versCollection, nil, true)
-    local depart = cmd.depuisCollection and collection(cmd.depuisCollection)
-    for _, n in ipairs(cmd.ids) do
-      local p = cat:getPhotoByLocalId(n) or error('photo introuvable : ' .. tostring(n))
-      if not p:getRawMetadata('isVirtualCopy') then error('pas une copie virtuelle, on n\'y touche pas : ' .. tostring(n)) end
-      p:setRawMetadata('pickStatus', -1)
-      pcall(function() p:setRawMetadata('copyName', cmd.nom) end)
-      aSupprimer:addPhotos { p }
-      if depart then depart:removePhotos { p } end
-      faites[#faites + 1] = fiche(p)
-    end
+    temporaire = cat:createCollection('SpektraLR (essai) - à retirer', nil, true)
+    temporaire:addPhotos(photos)
   end)
-  return { ok = true, photos = faites }
+  cat:setActiveSources { temporaire }
+  local vu
+  for _ = 1, 3 do
+    LrSelection.selectAll()
+    for _ = 1, 20 do
+      LrTasks.sleep(0.25)
+      vu = {}
+      for _, p in ipairs(cat:getTargetPhotos()) do vu[#vu + 1] = id(p) end
+      table.sort(vu)
+      vu = table.concat(vu, ',')
+      if vu == voulu then break end
+    end
+    if vu == voulu then break end
+  end
+  if vu == voulu then
+    LrSelection.removeFromCatalog()
+    LrTasks.sleep(1)
+  end
+  cat:setActiveSources(sources)
+  ecrireAuCatalogue(function() temporaire:delete() end)
+  if vu ~= voulu then return { ok = false, erreur = 'sélection inattendue (' .. vu .. ') : rien retiré' } end
+  return { ok = true, retirees = voulu }
 end
 
 -- Pour le diagnostic : un bout de Lua, si Lightroom laisse loadstring.
