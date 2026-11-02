@@ -11,5 +11,5 @@ return {
   LrForceInitPlugin = true,
   LrLibraryMenuItems = { { title = 'SpektraLR (essai) : pilote', file = 'Etat.lua' } },
   LrShutdownPlugin = 'Arret.lua',
-  VERSION = { major = 0, minor = 1, revision = 0 },
+  VERSION = { major = 0, minor = 1, revision = 1 },
 }
