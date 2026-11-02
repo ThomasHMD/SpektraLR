@@ -1,0 +1,32 @@
+SpektraLR - Lightroom creative profiles derived from spektrafilm
+================================================================
+
+Derived from spektrafilm by Andrea Volpato
+https://github.com/andreavolpato/spektrafilm
+Licensed CC BY-SA 4.0 (see SPEKTRAFILM_LICENSE.txt and LICENSE-CC-BY-SA-4.0.txt)
+Modified by Thomas Hammoudi (https://github.com/ThomasHMD/SpektraLR).
+
+What was changed, compared with the spektrafilm profiles
+--------------------------------------------------------
+
+v0.1.0 (2026-11-02), spektrafilm 0.3.4 (commit 3bb2c2d), 20 films:
+
+- Each film profile (with its declared print paper for negatives; slide films are
+  scanned, not printed) is baked into a 32x32x32 RGB table embedded in a
+  Lightroom / Camera Raw creative profile (.xmp), ProPhoto RGB primaries,
+  Adobe gamma 1.8 encoding.
+- Table input: the Adobe Standard rendering (the profile sets
+  crs:CameraProfile="Adobe Standard"). The table undoes Adobe's default ACR3
+  tone curve (exact inverse of its "RGBTone" application, DNG SDK 1.7.1), then
+  maps the grey that Lightroom renders at L* 50 to an 18 % scene grey.
+- spektrafilm runs in LUT mode (spatial and stochastic effects off): no grain,
+  no halation, no diffusion in the tables.
+- Output is scaled so that the paper white (or the clear slide base) reaches
+  L* 100 (luminance only: the paper keeps its tint, the grey stays as neutral
+  as spektrafilm prints it), no black point compensation. The
+  scene exposure is shifted so that an 18 % grey prints at L* 49.6 (118/255).
+- Gamut: spektrafilm defaults of spektrafilm-lut (input gamut compression,
+  output compression "cam16ucs"), then clipped to [0, 1].
+
+The presets only reference these profiles and add Lightroom grain
+(GrainAmount, GrainSize, GrainFrequency) chosen by film speed.
