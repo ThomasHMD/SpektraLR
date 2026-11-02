@@ -7,16 +7,15 @@ local LrApplication = import 'LrApplication'
 local LrBinding = import 'LrBinding'
 local LrDialogs = import 'LrDialogs'
 local LrFunctionContext = import 'LrFunctionContext'
-local LrPathUtils = import 'LrPathUtils'
 local LrPrefs = import 'LrPrefs'
 local LrProgressScope = import 'LrProgressScope'
-local LrTasks = import 'LrTasks'
 local LrView = import 'LrView'
 
 local Reglages = require 'Reglages'
 local Spektra = require 'Spektra'
+local Tirage = require 'Tirage'
 
-local TITRE = 'SpektraLR'
+local TITRE = Tirage.TITRE
 -- SpektraLab part du fichier brut du boîtier : un JPEG ou un TIFF n'a plus de négatif à développer.
 local FORMATS_BRUTS = { RAW = true, DNG = true }
 
@@ -140,28 +139,6 @@ local function demanderChoix(context)
   }
 end
 
--- Une photo : reset, edit, export, puis import empilé. Renvoie le fichier écrit, ou nil et l'erreur.
-local function tirer(catalogue, photo, choix)
-  local chemin = photo:getRawMetadata('path')
-  if choix.repartirDeZero then
-    local fait, erreur = Spektra.appeler { 'reset', chemin }
-    if not fait then return nil, erreur end
-  end
-  local dev = choix.reprendreLR and photo:getDevelopSettings() or nil
-  local fait, erreur = Spektra.modifier(chemin, Reglages.patch(choix, dev))
-  if not fait then return nil, erreur end
-  local fichiers, erreurExport = Spektra.exporter(chemin, choix.recette, LrPathUtils.parent(chemin))
-  if not fichiers then return nil, erreurExport end
-  local fichier = fichiers[1]
-  if not catalogue:findPhotoByPath(fichier) then
-    local importe, erreurImport = LrTasks.pcall(function()
-      catalogue:withWriteAccessDo(TITRE, function() catalogue:addPhoto(fichier, photo, 'above') end)
-    end)
-    if not importe then return nil, 'Écrit mais pas importé (' .. fichier .. ') : ' .. tostring(erreurImport) end
-  end
-  return fichier
-end
-
 LrFunctionContext.postAsyncTaskWithContext(TITRE, function(context)
   LrDialogs.attachErrorDialogToFunctionContext(context)
   local catalogue = LrApplication.activeCatalog()
@@ -183,7 +160,7 @@ LrFunctionContext.postAsyncTaskWithContext(TITRE, function(context)
     if progression:isCanceled() then break end
     local nom = photo:getFormattedMetadata('fileName')
     progression:setCaption(string.format('%s (%d sur %d)', nom, i, #bruts))
-    local fichier, erreur = tirer(catalogue, photo, choix)
+    local fichier, erreur = Tirage.tirer(catalogue, photo, choix)
     if fichier then faits = faits + 1 else echecs[#echecs + 1] = nom .. ' : ' .. tostring(erreur) end
     progression:setPortionComplete(i, #bruts)
   end

@@ -53,6 +53,12 @@ profil d'Adobe : le texte produit est identique, caractère pour caractère.
 Pendant le calcul, `fabriquer_profils.py` affiche pour chaque film où sort le gris d'Adobe : entre L* 49,1 et 49,3, pour
 une cible à 49,6.
 
+Dans le vrai Lightroom Classic (15.6), sur une copie virtuelle d'un RAW de mon X-T4, j'ai exporté le même cadrage deux
+fois en TIFF ProPhoto 16 bits : en Adobe Standard, puis avec le profil. J'ai appliqué la table moi-même au premier export
+(`outils/essai-lr/comparer.py`) et comparé le résultat au second. L'écart moyen est de ΔE 0,16 pour la Portra 400 et de
+0,30 pour la Velvia 100 ; 95 % des pixels restent sous 0,6 et 1,2. Le profil, lui, déplace les couleurs de 3,3 et 5,1
+en moyenne. Lightroom lit donc la table à l'étape, dans le codage et dans l'ordre des canaux prévus.
+
 ## Ce qui reste approché
 
 - La courbe ACR3 est celle du SDK d'Adobe. Si Lightroom ajoutait une correction propre à un boîtier, l'inversion
