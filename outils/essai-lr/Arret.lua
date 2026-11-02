@@ -1,0 +1,1 @@
+require('Pilote').arret = true

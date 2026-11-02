@@ -59,7 +59,21 @@ Avec le module seulement : Kodak Tri-X 400, T-Max 100, Ilford HP5 Plus 400, Fuji
 
 ## Exemples
 
-Les rendus du module, sur des RAW de mon X-T4, sans autre retouche.
+### Les profils, exportés par Lightroom
+
+Les presets sur des copies virtuelles de RAW de mon X-T4, remises au rendu par défaut d'Adobe Standard, sans autre retouche.
+
+<p align="center"><img src="docs/figures/spektralr-planche-profils-florence.jpg" width="620" alt="Florence avec les profils Portra 400, Ektar 100, Velvia 100 et Kodachrome 64, exportée par Lightroom"></p>
+
+| Planche | Ce qu'on y voit |
+|---|---|
+| [Florence](docs/figures/spektralr-planche-profils-florence.jpg), [la voiture](docs/figures/spektralr-planche-profils-voiture.jpg), [la mer](docs/figures/spektralr-planche-profils-mer.jpg), [les fleurs](docs/figures/spektralr-planche-profils-fleurs.jpg), [la cascade](docs/figures/spektralr-planche-profils-cascade.jpg) | Portra 400, Ektar 100, Velvia 100 et Kodachrome 64 |
+| [Les négatifs couleur](docs/figures/spektralr-planche-profils-negatifs.jpg) | Portra 400, Pro 400H, Gold 200 et Provia 100F |
+| [Le cinéma](docs/figures/spektralr-planche-profils-cinema.jpg) | Vision3 500T et Vision3 250D |
+
+### Le module
+
+Les rendus du module, sur les mêmes RAW, sans autre retouche.
 
 <p align="center"><img src="docs/figures/spektralr-planche-halo.jpg" width="620" alt="Le halo en gros plan : CineStill sans halo, avec le halo du film, avec un halo triplé, et la Portra 400"></p>
 
@@ -73,7 +87,7 @@ Les rendus du module, sur des RAW de mon X-T4, sans autre retouche.
 
 ## Comment c'est fait
 
-[La fabrication des profils](docs/fabrication-des-profils.md) explique ce que Lightroom donne à un profil créatif, comment la table défait la courbe d'Adobe Standard avant de passer la scène dans spektrafilm, et comment chaque fichier est contrôlé.
+[La fabrication des profils](docs/fabrication-des-profils.md) explique ce que Lightroom donne à un profil créatif, comment la table défait la courbe d'Adobe Standard avant de passer la scène dans spektrafilm, et comment chaque fichier est contrôlé. Dans le vrai Lightroom, le rendu d'un profil colle à la table calculée : écart moyen ΔE 0,16 sur la Portra 400, 0,30 sur la Velvia 100.
 
 ## Le dépôt
 
@@ -82,6 +96,7 @@ Les rendus du module, sur des RAW de mon X-T4, sans autre retouche.
 | [`SpektraLR.lrplugin/`](SpektraLR.lrplugin/) | le module Lightroom (Lua) |
 | [`presets/SpektraLR/`](presets/SpektraLR/) | les profils, les presets, leurs licences et leur `CHANGELOG.txt` |
 | [`outils/`](outils/) | le calcul des profils (`fabriquer_profils.py`, avec spektrafilm) et l'écriture des tables au format d'Adobe (`adobe_table.py`) |
+| [`outils/essai-lr/`](outils/essai-lr/) | un module d'essai qui pilote Lightroom par fichiers (copies virtuelles, presets, exports), et la comparaison entre Lightroom et la table |
 | [`tests/`](tests/) | les contrôles : `lua tests/test_hors_lr.lua`, `lua tests/test_avec_cli.lua <copie d'un RAW>` (le module entier, avec la vraie commande SpektraLab), `python3 tests/test_profils.py` |
 | [`docs/`](docs/) | la fabrication des profils, les planches |
 
