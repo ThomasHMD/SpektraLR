@@ -33,14 +33,33 @@ python3 outils/essai-lr/pilote.py '{"action": "rendre", "cle": "a", "etapes": [{
 | `tirer` | le tirage du module SpektraLR (`Tirage.lua`) sur une copie |
 | `inventaire`, `adopter` | les photos d'une collection ; reprendre une copie sous une clé, après un redémarrage |
 | `retirer` | retirer du catalogue des copies virtuelles, ou les tirages du module (leur fichier reste sur le disque) |
+| `relancer.py` (script à part) | redémarrer Lightroom (fermer, attendre la sauvegarde, relancer) ; le clic « Sauvegarder » reste à faire par computer-use |
+| `rapide` | la collection rapide (touche B) : `{"op": "lister"}`, `"vider"`, `"ajouter"` avec `ids` (copies virtuelles seulement) |
 | `lua` | un bout de Lua, pour le diagnostic |
 
 Le module ne touche jamais une photo maîtresse : il ne travaille que sur les copies virtuelles qu'il a créées, et ne
-retire du catalogue qu'une copie virtuelle ou un tirage qu'on lui nomme. Les copies restent d'un essai à l'autre dans
+retire du catalogue qu'une copie virtuelle ou un tirage qu'on lui nomme. Depuis le 14/11/2026 c'est un verrou dans le
+code : `rendre`, `tirer` et `adopter` refusent toute photo qui n'est pas une copie virtuelle. Seule exception voulue :
+`rapide` `vider` retire de la collection rapide ce qui s'y trouve (l'appartenance seulement, pas les réglages). Les copies restent d'un essai à l'autre dans
 une même collection : on les reprend au lieu d'en refaire.
 
 `comparer.py` compare l'export d'un profil par Lightroom à la table appliquée à la main (résultat dans
 [la fabrication des profils](../../docs/fabrication-des-profils.md#les-contrôles)).
+
+## Pièges
+
+- **Ne jamais quitter Lightroom par `osascript … to quit` quand Thomas est absent** : la fenêtre « Sauvegarder le catalogue » s'ouvre et attend un clic (14/11/2026). Tant qu'elle est ouverte, l'écriture au catalogue passe (copies, réglages, collections), mais tout ce qui passe par l'interface reste sans effet : collection rapide, `retirer`.
+  **Règle de Thomas (14/11/2026) : toujours « Sauvegarder », sans le déranger.** La sauvegarde est réglée « À chaque
+  fermeture de Lightroom ». Les commandes de Claude n'ont pas l'accessibilité : System Events refusé (y compris dans un
+  `.command` ouvert par Terminal.app, vérifié), touches et clics de `CGEventPostToPid` ignorés ; emprunter les droits
+  d'une autre appli (workflow Alfred) est refusé par les permissions de Claude Code, à juste titre. Le seul clic
+  possible est celui de l'outil computer-use (`app_click`), qui demande une autorisation affichée sur l'écran du Mac :
+  refusée d'office quand Thomas est à distance. Donc : **ne fermer Lightroom que si ce clic est possible**, et préférer
+  tout faire sans redémarrer. `python3 relancer.py` ferme, signale la fenêtre, attend la sauvegarde, relance et attend
+  le pilote.
+- Lightroom ne relit presets et modules externes qu'à son lancement : `relancer.py` après en avoir écrit.
+- **Collection rapide** (touche B) : `catalog.kQuickCollectionIdentifier` pour l'afficher, `photo:addOrRemoveFromTargetCollection()` pour basculer une photo, **qui n'agit que si la photo est sélectionnée et cible** (sinon rien, sans erreur) : l'action `rapide` la montre dans une collection temporaire, la sélectionne, attend qu'elle soit la cible, puis bascule, une écriture par photo. La cible doit être la collection rapide (réglage par défaut de Lightroom).
+- De nouveaux `.xmp` de presets ne sont vus qu'après un redémarrage de Lightroom.
 
 ## Sources
 

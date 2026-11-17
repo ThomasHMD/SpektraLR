@@ -11,7 +11,9 @@ installer à côté de Lightroom.
 Actions : ping, chercher (photos par nom de fichier), presets (dossiers et noms), copie (copie virtuelle d'une photo,
 rangée dans une collection), inventaire et adopter (reprendre les copies d'une collection), rendre (presets ou
 réglages sur une copie, lecture des réglages, export), tirer (le tirage du module, Tirage.lua, sur une copie), retirer
-(des copies ou des tirages, du catalogue).
+(des copies ou des tirages, du catalogue), rapide (lister, vider, remplir la collection rapide).
+
+Verrou : rendre, tirer et adopter refusent une photo qui n'est pas une copie virtuelle ; retirer aussi (sauf tirages).
 ]]
 local LrApplication = import 'LrApplication'
 local LrDate = import 'LrDate'
@@ -51,8 +53,11 @@ local function ecrireAuCatalogue(f)
   catalogue():withWriteAccessDo(TITRE, f, { timeout = 30 })
 end
 
+-- Verrou : le pilote ne règle, n'exporte et ne tire que des copies virtuelles, jamais une photo maîtresse.
 local function photo(cle)
-  return copies[cle] or error('copie inconnue : ' .. tostring(cle))
+  local p = copies[cle] or error('copie inconnue : ' .. tostring(cle))
+  if not p:getRawMetadata('isVirtualCopy') then error('pas une copie virtuelle, on n\'y touche pas : ' .. tostring(cle)) end
+  return p
 end
 
 local function trouverPreset(dossier, nom)
@@ -233,8 +238,68 @@ end
 -- Reprend une copie déjà au catalogue (après un redémarrage de Lightroom) sous une clé.
 function actions.adopter(cmd)
   -- `id` est pris par l'identifiant de la commande : le numéro de la photo vient dans `photo`
-  copies[cmd.cle] = catalogue():getPhotoByLocalId(cmd.photo) or error('photo introuvable : ' .. tostring(cmd.photo))
-  return { ok = true, copie = fiche(copies[cmd.cle]) }
+  local p = catalogue():getPhotoByLocalId(cmd.photo) or error('photo introuvable : ' .. tostring(cmd.photo))
+  if not p:getRawMetadata('isVirtualCopy') then error('pas une copie virtuelle, on n\'y touche pas : ' .. tostring(cmd.photo)) end
+  copies[cmd.cle] = p
+  return { ok = true, copie = fiche(p) }
+end
+
+-- La collection rapide (touche B). op = "lister", "vider" ou "ajouter" (ids : copies virtuelles seulement).
+-- Le SDK n'a qu'une bascule, photo:addOrRemoveFromTargetCollection(), sur la collection cible (la collection rapide
+-- par défaut) : un appel par écriture (en boucle dans une seule écriture, seule la première bascule), et on ne bascule
+-- que ce qui doit changer, d'après la liste relue. Elle passe par l'interface : sans effet tant qu'une fenêtre modale
+-- de Lightroom est ouverte, d'où la relecture finale.
+local function contenuRapide(cat)
+  local sources = cat:getActiveSources()
+  cat:setActiveSources { cat.kQuickCollectionIdentifier }
+  LrTasks.sleep(1.5)
+  local ids = {}
+  for _, p in ipairs(cat:getMultipleSelectedOrAllPhotos()) do ids[p.localIdentifier] = p end
+  cat:setActiveSources(sources)
+  return ids
+end
+
+function actions.rapide(cmd)
+  local cat = catalogue()
+  local avant = contenuRapide(cat)
+  local basculer = {}
+  if cmd.op == 'vider' then
+    for _, p in pairs(avant) do basculer[#basculer + 1] = p end
+  elseif cmd.op == 'ajouter' then
+    for _, n in ipairs(cmd.ids or {}) do
+      local p = cat:getPhotoByLocalId(n) or error('photo introuvable : ' .. tostring(n))
+      if not p:getRawMetadata('isVirtualCopy') then error('pas une copie virtuelle : ' .. tostring(n)) end
+      if not avant[n] then basculer[#basculer + 1] = p end
+    end
+  elseif cmd.op ~= 'lister' then
+    error('op inconnue : ' .. tostring(cmd.op))
+  end
+  -- La bascule n'agit que sur la photo sélectionnée et cible (vérifié le 14/11/2026 : sans sélection, rien ne se
+  -- passe) : on montre les photos dans une collection temporaire, on sélectionne chacune, on attend qu'elle soit la
+  -- cible, puis on bascule.
+  local nonCiblees = 0
+  if #basculer > 0 then
+    local sources, temporaire = cat:getActiveSources()
+    ecrireAuCatalogue(function()
+      temporaire = cat:createCollection('Pilote - collection rapide', nil, true)
+      temporaire:addPhotos(basculer)
+    end)
+    cat:setActiveSources { temporaire }
+    LrTasks.sleep(1.5)
+    for _, p in ipairs(basculer) do
+      if cibler(cat, p) then
+        ecrireAuCatalogue(function() p:addOrRemoveFromTargetCollection() end)
+        LrTasks.sleep(0.3)
+      else
+        nonCiblees = nonCiblees + 1
+      end
+    end
+    cat:setActiveSources(sources)
+    ecrireAuCatalogue(function() temporaire:delete() end)
+  end
+  local apres, liste = contenuRapide(cat), {}
+  for _, p in pairs(apres) do liste[#liste + 1] = fiche(p) end
+  return { ok = nonCiblees == 0, basculees = #basculer - nonCiblees, nonCiblees = nonCiblees, photos = liste }
 end
 
 -- Retire du catalogue des copies virtuelles (`ids`) ou des tirages du module (`tirages`, leurs chemins), jamais une
